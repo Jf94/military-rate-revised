@@ -2,7 +2,6 @@ use "${DIR_DATA_PROCESSED}/gdp.dta", clear
 
 // Merge military expenditures
 merge 1:1 iso year using "${DIR_DATA_PROCESSED}/milex.dta", nogen keep(master matched using)
-gen milex = milex_gdp * gdp
 
 // Merge windfalls
 merge 1:1 iso year using "${DIR_DATA_PROCESSED}/windfalls.dta", nogen keep(master matched using)
