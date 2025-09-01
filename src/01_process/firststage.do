@@ -1,0 +1,17 @@
+capture program drop build_panel_firststage
+program define build_panel_firststage
+	syntax, ///
+		[save(real 0)] ///
+		[conflict_file(string)] ///
+		[dropcmdcodes(string)] ///
+		[dropcmdgroup(string)]
+
+	drop windfall 
+	rename windfall_01 windfall
+		
+	reghdfe milex0 windfall, absorb(iso year) cluster(iso year) nocons
+
+	predict double milex_chg_pred, xb
+	drop cid
+	*keep iso year milex* windfall* gdp conflict* lmilex*
+end

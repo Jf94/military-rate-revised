@@ -23,4 +23,17 @@ xtset cid year
 
 keep if year >= 1977
 
+drop if iso == ""
+
+forvalues h=0/20 {
+	gen milex`h' = f`h'.milex - l.milex
+	gen cmilex`h' = log(f`h'.milex) - log(l.milex)
+	gen lmilex`h' = log(f`h'.milex) - log(l.milex)
+}
+
+rename iso iso_wb
+rcallcountrycode iso_wb, from(wb) to(iso3c) gen(iso)
+drop if iso == ""
+drop iso_wb
+
 save "${DIR_DATA_PROCESSED}/panel.dta", replace

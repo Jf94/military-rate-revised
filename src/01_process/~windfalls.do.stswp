@@ -16,7 +16,7 @@ gen global_market_share = (export_value - import_value) / export_value_world
 cap drop gid
 egen gid = group(iso cmdcode)
 xtset gid year
-gen windfall = (l.export_value - l.import_value) * ret
+gen windfall = (l.export_value ) * ret
 gen windfall_10 = windfall if l.global_market_share < 0.10 & l.global_market_share > -0.10
 gen windfall_05 = windfall if l.global_market_share < 0.05 & l.global_market_share > -0.05
 gen windfall_01 = windfall if l.global_market_share < 0.01 & l.global_market_share > -0.01
