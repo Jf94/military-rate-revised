@@ -21,6 +21,9 @@ drop if iso == "MHL" | iso == "LBR"
 egen cid = group(iso)
 xtset cid year
 
+gen milex_gdp_chg0 = (milex - l.milex) / l.gdp
+gen l1gdp = l.gdp
+
 keep if year >= 1977
 
 drop if iso == ""
@@ -35,5 +38,7 @@ rename iso iso_wb
 rcallcountrycode iso_wb, from(wb) to(iso3c) gen(iso)
 drop if iso == ""
 drop iso_wb
+
+
 
 save "${DIR_DATA_PROCESSED}/panel.dta", replace

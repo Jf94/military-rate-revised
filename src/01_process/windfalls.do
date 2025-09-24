@@ -1,6 +1,9 @@
 use "${DIR_DATA_RAW}/federle/4digit/trade.dta", clear
 merge m:1 cmdcode year using "${DIR_DATA_RAW}/federle/4digit/prices.dta", nogen keep(master matched)
 
+
+*gen cmdcode_1 = substr(cmdcode, 1, 1)
+*keep if cmdcode_1 == "3"
 gen ret = price / l1price - 1
 
 egen gid = group(iso cmdcode)

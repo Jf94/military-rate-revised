@@ -6,50 +6,66 @@ build_panel_firststage
 build_panel_secondstage
 xtset cid year
 
+*replace RIVAL_pred_change = . if RIVAL_pred_change == 0
+*replace ALLY_pred_change = . if ALLY_pred_change == 0
 replace RIVAL_pred_change = 0 if RIVAL_pred_change == .
+replace ALLY_pred_change = 0 if ALLY_pred_change == .
+replace TRA = 0 if TRA == .
+replace TMA = 0 if TMA == .
+replace ALLY_windfall = 0 if ALLY_windfall == .
+replace TRA_windfall = 0 if TRA_windfall == .
 
-// Table
-label var ALLY_pred_change "\(-\widehat{\Delta TMA}\)"
-
-eststo: xtscc milex1 l(0/2).ALLY_pred_change l(0/2).windfall l(1/2).milex0 l(0/2).conflict_high l(0/2).conflict_low l(1/2).d.gdp i.year, fe level(90)
-estadd local hascfe "\checkmark"
-estadd local hasyfe "\checkmark"
-estadd local hasctrl "\checkmark"
-
-eststo: xtscc milex5 l(0/2).ALLY_pred_change l(0/2).windfall l(1/2).milex0 l(0/2).conflict_high l(0/2).conflict_low l(1/2).d.gdp i.year, fe level(90)
-estadd local hascfe "\checkmark"
-estadd local hasyfe "\checkmark"
-estadd local hasctrl "\checkmark"
-
-eststo: xtscc milex10 l(0/2).ALLY_pred_change l(0/2).windfall l(1/2).milex0 l(0/2).conflict_high l(0/2).conflict_low l(1/2).d.gdp i.year, fe level(90)
-estadd local hascfe "\checkmark"
-estadd local hasyfe "\checkmark"
-estadd local hasctrl "\checkmark"
-
-esttab using "${DIR_DATA_EXPORTS}/secondstage.tex", star(* 0.1 ** 0.05  *** 0.01) keep(ALLY_pred_change) r2 label fragment se tex nomtitles nonumbers replace  stats(hasctrl hascfe hasyfe N, fmt(1 3 "%9.0fc") label("Controls" "Country fixed effects" "Year fixed effects" "\$N\$")) prefoot(\hline\noalign{\vskip 1.3mm}) posthead("") prehead("")
-eststo clear
-
-// Local projections
-local h_max 15
-cap drop b* ll* ul* h
-gen b_instr = .
-gen ll_instr = .
-gen ul_instr = .
-gen h = _n-1 if _n <= `h_max' + 1
-
-forvalues h=0/`h_max' {
-	xtscc milex`h' l(0/2).ALLY_pred_change l(0/2).windfall l(1/2).milex0 l(0/2).conflict_high l(0/2).conflict_low l(1/2).d.gdp i.year, fe level(90)
-	lincom 100 * ALLY_pred_change, level(90)
+forvalues h=0/10 {
+	winsor2 milex`h', cuts(5 95)
+	rename milex`h'_w milex`h'_w5
 	
-	replace b_instr = r(estimate) if h == `h'
-	replace ll_instr = r(lb) if h == `h'
-	replace ul_instr = r(ub) if h == `h'
+	winsor2 milex`h', cuts(1 99)
+	rename milex`h'_w milex`h'_w1
+	
+	winsor2 milex`h', cuts(0.5 99.5)
+	rename milex`h'_w milex`h'_w05
+	
+	winsor2 milex`h', cuts(2.5 97.5)
+	rename milex`h'_w milex`h'_w25
+}
+gen dTMA = d.TMA
+gen dTRA = d.TRA
+gen diff = dTMA - dTRA
+
+xtset cid year
+
+
+// TMA First stage
+label var ALLY_windfall "Ally Windfall"
+label var TRA_windfall "Rival Windfall"
+
+foreach depvar in dTMA dTRA {
+	eststo: reghdfe `depvar' ALLY_windfall TRA_windfall, cluster(iso) noabsorb
+	eststo: reghdfe `depvar' ALLY_windfall TRA_windfall, cluster(iso) absorb(iso)
+	estadd local hascfe "\checkmark"
+	eststo: reghdfe `depvar' ALLY_windfall TRA_windfall, cluster(iso) absorb(iso year)
+	estadd local hascfe "\checkmark"
+	estadd local hasyfe "\checkmark"
+
+
+
+	esttab using "${DIR_DATA_EXPORTS}/firststage_`depvar'.tex", tex fragment nonumber nomtitle keep(ALLY_windfall TRA_windfall) posthead("") label stats(hascfe hasyfe F r2 N, fmt(1 1 1 3 "%9.0fc") label("Country fixed effects" "Year fixed effects" "F-Statistic" "\$R^2\$" "\$N\$"))
+	eststo clear
 }
 
+quit
 
-twoway ///
-	(line b_instr h, color(stred)) ///
-	(rarea ll_instr ul_instr h, color(stred%50) lwidth(0)) ///
-	, yline(0) xtitle("Year after ally spending shock") ytitle("Military expenditures (in USD)") title("Response to 100 USD increase of allied military spending") legend(off) scale(1.4) ysize(9) xsize(20) xla(0(5)15)
-	
-graph export "${DIR_DATA_EXPORTS}/secondstage_lp.pdf", as(pdf) replace
+
+
+ivreghdfe milex0_w5 (dTMA dTRA = ALLY_windfall TRA_windfall), cluster(iso) first
+ivreghdfe milex0_w5 (dTMA dTRA = ALLY_windfall TRA_windfall), cluster(iso) absorb(iso) first
+ivreghdfe milex0_w5 (dTMA dTRA = ALLY_windfall TRA_windfall), cluster(iso) absorb(iso year) first
+
+ivreghdfe milex0_w5 (dTMA dTRA = ALLY_windfall TRA_windfall), cluster(iso year) first
+ivreghdfe milex0_w5 (dTMA dTRA = ALLY_windfall TRA_windfall), cluster(iso year) absorb(iso) first
+ivreghdfe milex0_w5 (dTMA dTRA = ALLY_windfall TRA_windfall), cluster(iso year) absorb(iso year) first
+
+ivreghdfe milex0_w5 (diff = ALLY_windfall TRA_windfall), cluster(iso) absorb(iso year) first
+ivreghdfe milex0_w5 (diff = ALLY_windfall TRA_windfall), cluster(iso) absorb(iso) first
+ivreghdfe milex0_w5 (diff = ALLY_windfall TRA_windfall), cluster(iso) absorb(iso year) first
+

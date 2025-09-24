@@ -18,6 +18,9 @@ bysort id: replace year = year + _n - 1
 // Alliance in t are pre-determined in t-1
 replace year = year + 1
 
+
+save "${DIR_DATA_PROCESSED}/alliances_ccode.dta", replace
+
 rcallcountrycode stateA, from(cown) to(iso3c) gen(iso_ally)
 rcallcountrycode stateB, from(cown) to(iso3c) gen(iso)
 replace iso = "DEU" if stateA == 260
@@ -26,6 +29,6 @@ drop if iso == iso_ally
 drop if iso == ""
 drop if iso_ally == ""
 
-keep if year >= 1975
+*keep if year >= 1975
 
 save "${DIR_DATA_PROCESSED}/alliances.dta", replace
