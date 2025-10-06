@@ -1,6 +1,6 @@
 import delimited "${DIR_DATA_RAW}/thompson/strategic_rivalry_data_list_of_rivalries_by_type.csv", clear
 
-keep if spatial == 1 | interv == 1
+*keep if spatial == 1 | interv == 1
 
 gen rivalry = 1
 replace end = 2023 if ongoing2020==1
@@ -31,10 +31,6 @@ replace isoa = isob if _n > _N/2
 replace isob = isoa_old if _n > _N/2
 drop isoa_old
 collapse (sum) rivalry, by(year isoa isob)
-
-
-// Alliance in t are pre-determined in t-1
-replace year = year + 1
 
 
 save "${DIR_DATA_PROCESSED}/common/rivalries.dta", replace

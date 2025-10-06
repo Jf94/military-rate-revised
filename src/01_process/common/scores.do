@@ -74,6 +74,22 @@ replace F_ally = 0 if F_ally == .
 replace F_rival = rivalry
 replace F_rival = 0 if F_rival == .
 
+* Make sure nobody is both rival and ally at the same time
+*gen both = F_rival + F_ally
+*replace F_ally = 0 if both == 2
+*replace F_rival = 0 if both == 2
+
+
 keep iso1 iso2 year F_ally F_rival
 
+
 save "${DIR_DATA_PROCESSED}/common/scores.dta", replace
+
+
+egen gid = group(iso1 iso2)
+xtset gid year
+
+gen d_plus = l.F_ally
+gen d_minus = l.F_rival
+
+collapse (sum) d_plus d_minus, by(iso1 year)

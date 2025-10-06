@@ -1,5 +1,6 @@
 use "${DIR_DATA_PROCESSED}/longrun/macro.dta", clear
 
+
 bysort year: egen gdp_avg = mean(gdp)
 label var ALLY_milex "\(TMA\)"
 label var RIVAL_milex "\(TMR\)"
@@ -27,24 +28,26 @@ label var war_x_gdp "War \(\times\) GDP"
 label var ww1_bn "World War I (USD bn)"
 label var ww2_bn "World War II (USD bn)"
 
+xtset cid year
 
-
-eststo: xtscc milex ALLY_milex RIVAL_milex gdp
-eststo: xtscc milex ALLY_milex RIVAL_milex gdp gdp_avg
-eststo: xtscc milex i.year ALLY_milex RIVAL_milex gdp
+**** Baseline
+eststo clear
+eststo: xtscc f.milex ALLY_milex RIVAL_milex gdp
+eststo: xtscc f.milex ALLY_milex RIVAL_milex gdp gdp_avg
+eststo: xtscc f.milex i.year ALLY_milex RIVAL_milex gdp
 estadd local yfe "\checkmark"
 
-eststo: xtscc milex i.year ALLY_milex RIVAL_milex gdp war_bn
+eststo: xtscc f.milex i.year ALLY_milex RIVAL_milex gdp war_bn
 estadd local yfe "\checkmark"
 
-eststo: xtscc milex i.year ALLY_milex RIVAL_milex gdp war_bn war_x_gdp
+eststo: xtscc f.milex i.year ALLY_milex RIVAL_milex gdp war_bn war_x_gdp
 estadd local yfe "\checkmark"
 
-eststo: xtscc milex i.year ALLY_milex RIVAL_milex war_bn war_x_gdp i.isoenc#c.gdp i.isoenc#c.gdp_avg
+eststo: xtscc f.milex i.year ALLY_milex RIVAL_milex war_bn war_x_gdp i.isoenc#c.gdp i.isoenc#c.gdp_avg
 estadd local yfe "\checkmark"
 estadd local csexposure "\checkmark"
 
-eststo: xtscc milex i.year ALLY_milex RIVAL_milex war_bn war_x_gdp i.isoenc#c.gdp i.isoenc#c.gdp_avg ww1_bn ww2_bn
+eststo: xtscc f.milex i.year ALLY_milex RIVAL_milex war_bn war_x_gdp i.isoenc#c.gdp i.isoenc#c.gdp_avg ww1_bn ww2_bn
 estadd local yfe "\checkmark"
 estadd local csexposure "\checkmark"
 // From call: Here also one with regional wars
@@ -54,6 +57,40 @@ esttab using "${DIR_DATA_EXPORTS}/longrun/reg.tex",  star(* 0.1 ** 0.05 *** 0.01
 eststo clear
 
 
+
+**** Baseline + country fe
+eststo: xtscc f.milex ALLY_milex RIVAL_milex gdp, fe
+eststo: xtscc f.milex ALLY_milex RIVAL_milex gdp gdp_avg, fe
+eststo: xtscc f.milex i.year ALLY_milex RIVAL_milex gdp, fe
+estadd local yfe "\checkmark"
+
+eststo: xtscc f.milex i.year ALLY_milex RIVAL_milex gdp war_bn, fe
+estadd local yfe "\checkmark"
+
+eststo: xtscc f.milex i.year ALLY_milex RIVAL_milex gdp war_bn war_x_gdp, fe
+estadd local yfe "\checkmark"
+
+eststo: xtscc f.milex i.year ALLY_milex RIVAL_milex war_bn war_x_gdp i.isoenc#c.gdp i.isoenc#c.gdp_avg, fe
+estadd local yfe "\checkmark"
+estadd local csexposure "\checkmark"
+
+eststo: xtscc f.milex i.year ALLY_milex RIVAL_milex war_bn war_x_gdp i.isoenc#c.gdp i.isoenc#c.gdp_avg ww1_bn ww2_bn, fe
+estadd local yfe "\checkmark"
+estadd local csexposure "\checkmark"
+// From call: Here also one with regional wars
+
+esttab using "${DIR_DATA_EXPORTS}/longrun/reg_cfe.tex",  star(* 0.1 ** 0.05 *** 0.01) tex fragment nonumbers nomtitle posthead("") keep(ALLY_* RIVAL_* gdp gdp_avg war_bn war_x_gdp ww*) label ///
+	stats(yfe csexposure r2 N, fmt(1 1 2 "%9.0fc") label("Year FE" "Country-specific slopes" "\(R^2\)"  "\$N\$")) replace se
+eststo clear
+
+
+
+
+
+
+
+
+**** Descriptive graph
 xtscc milex ALLY_milex RIVAL_milex i.isoenc#c.gdp i.isoenc#c.gdp_avg c.war#c.gdp c.war ww1 ww2
 
 predict milex_pred, xb

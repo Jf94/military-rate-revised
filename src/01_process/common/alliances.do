@@ -16,7 +16,7 @@ expand ndups
 bysort id: replace year = year + _n - 1
 
 // Alliance in t are pre-determined in t-1
-replace year = year + 1
+*replace year = year + 1
 
 
 save "${DIR_DATA_PROCESSED}/alliances_ccode.dta", replace
