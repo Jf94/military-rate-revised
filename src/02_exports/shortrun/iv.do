@@ -87,6 +87,22 @@ end
 
 
 use "${DIR_DATA_PROCESSED}/shortrun/macro.dta", clear
+
+eststo clear
+eststo: reghdfe milex1 windfall l1dmilex l2dmilex, noabsorb cluster(iso)
+estadd local controls "\checkmark"
+
+label var windfall "Windfall"
+
+esttab using "${DIR_DATA_EXPORTS}/shortrun/iv/firststage.tex", ///
+	keep(windfall) ///
+	star(* 0.1 ** 0.05 *** 0.01) ///
+	tex fragment nonumbers nomtitle posthead("")  se label  ///
+	stats(controls F  r2 N, fmt(1 2 2 "%9.0fc") ///
+	label("Controls" "F-Statistic" "\(R^2\)" "\$N\$")) ///
+	replace
+
+
 xtset, clear
 
 eststo clear

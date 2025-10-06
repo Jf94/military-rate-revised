@@ -13,4 +13,4 @@ keep iso y*
 reshape long y, i(iso) j(year)
 rename y gdp
 
-save "${DIR_DATA_PROCESSED}/gdp.dta", replace
+save "${DIR_DATA_PROCESSED}/shortrun/gdp.dta", replace

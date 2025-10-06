@@ -19,8 +19,8 @@ program define build_panel_firststage
 	
 	reghdfe milex_gdp_chg0_w windfall_gdp, absorb(iso year) cluster(iso year) nocons
 	
-	predict double milex_chg_pred, xb
-	replace milex_chg_pred = milex_chg_pred * l1gdp
+	predict double milex_exog, xb
+	replace milex_exog = milex_exog * l1gdp
 	
 	
 	*reghdfe milex1 windfall, absorb(iso year) cluster(iso year) nocons
