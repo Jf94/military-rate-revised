@@ -65,8 +65,8 @@ sum `var'
 gen F_ally = . // (`var' - r(min)) / (r(max) - r(min))
 gen F_rival = . // (1 - F_ally)
 
-merge 1:1 iso1 iso2 year using `alliances', nogen keep(master matched)
-merge 1:1 iso1 iso2 year using `rivalries', nogen keep(master matched)
+merge 1:1 iso1 iso2 year using `alliances', nogen keep(master matched using)
+merge 1:1 iso1 iso2 year using `rivalries', nogen keep(master matched using)
 
 replace F_ally = defense
 replace F_ally = 0 if F_ally == .
@@ -89,7 +89,10 @@ save "${DIR_DATA_PROCESSED}/common/scores.dta", replace
 egen gid = group(iso1 iso2)
 xtset gid year
 
-gen d_plus = l.F_ally
-gen d_minus = l.F_rival
+gen d_plus = F_ally
+gen d_minus = F_rival
 
 collapse (sum) d_plus d_minus, by(iso1 year)
+
+rename iso1 iso
+save "${DIR_DATA_PROCESSED}/common/scores_n.dta", replace
