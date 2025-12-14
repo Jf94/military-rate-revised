@@ -25,12 +25,32 @@ global DIR_DATA_RAW "${DIR_PROJ}/data/01_raw"
 global DIR_DATA_PROCESSED "${DIR_PROJ}/data/02_processed"
 global DIR_DATA_EXPORTS "${DIR_PROJ}/data/03_exports"
 global DIR_DATA_TMP "${DIR_PROJ}/data/tmp"
+global DIR_RESSOURCES "${DIR_PROJ}/ressources"
+
 
 global DIR_SRC_PROCESS "${DIR_PROJ}/src/01_process"
 global DIR_SRC_EXPORTS "${DIR_PROJ}/src/02_exports"
 
 
-do "${DIR_SRC_PROCESS}/gdp.do"
-do "${DIR_SRC_PROCESS}/milex.do"
-do "${DIR_SRC_PROCESS}/windfalls.do"
-do "${DIR_SRC_PROCESS}/panel.do"
+do "${DIR_SRC_PROCESS}/common/gdp.do"
+do "${DIR_SRC_PROCESS}/common/milex.do"
+do "${DIR_SRC_PROCESS}/common/alliances.do"
+do "${DIR_SRC_PROCESS}/common/rivalries.do"
+do "${DIR_SRC_PROCESS}/common/scores.do"
+
+
+do "${DIR_SRC_PROCESS}/longrun/macro.do"
+
+do "${DIR_SRC_PROCESS}/shortrun/gdp.do"
+do "${DIR_SRC_PROCESS}/shortrun/milex.do"
+do "${DIR_SRC_PROCESS}/shortrun/macro.do"
+do "${DIR_SRC_PROCESS}/shortrun/windfalls.do"
+
+// Exports
+do "${DIR_SRC_EXPORTS}/descriptives/network.do"
+
+do "${DIR_SRC_EXPORTS}/longrun/reg.do"
+do "${DIR_SRC_EXPORTS}/longrun/era.do"
+
+do "${DIR_SRC_EXPORTS}/shortrun/iv.do"
+do "${DIR_SRC_EXPORTS}/shortrun/iv_decade.do"

@@ -50,18 +50,18 @@ local b_TMR = r(table)["b", "RIVAL_milex"]
 local b_gdp = r(table)["b", "gdp"]
 local b_gdp_avg_neg = r(table)["b", "gdp_avg_neg"]
 
-//`isoenc_max'
+
+
+// Set up non-linear regressio
 forvalues isoenc_id=1/`isoenc_max' {
 	local lbl: label (isoenc) `isoenc_id'
+	local expression_gdp `expression_gdp' exp({`lbl'_gdp=`b_gdp'}) * `isoenc_id'.isoenc * gdp +	
+	local expression_gdp_avg `expression_gdp_avg' exp({`lbl'_gdp_avg_neg=`b_gdp_avg_neg'}) * `isoenc_id'.isoenc * gdp_avg_neg
 	
-	local expression_gdp `expression_gdp' exp({`lbl'_gdp=`b_gdp'}) * `isoenc_id'.isoenc * gdp +
-	
-	local expression_gdp_avg `expression_gdp_avg' exp({`lbl'_gdp_avg_neg=`b_gdp_avg_neg'}) * `isoenc_id'.isoenc * gdp_avg_neg +
+	if `isoenc_id' < `isoenc_max' {
+		local expression_gdp_avg `expression_gdp_avg' +
+	}
 }
-
-disp "`expression_gdp'"
-
-
 
 nl ( ///
 	fmilex = ///
@@ -69,10 +69,9 @@ nl ( ///
 	{RIVAL_milex=`b_TMR'} * RIVAL_milex + ///
 	`expression_gdp' ///
 	`expression_gdp_avg' ///
-	{_cons=1} ///
 )
 
-
+// Store regression coefficients
 gen coeff_iso = ""
 gen lambda = .
 gen theta = .
@@ -135,14 +134,35 @@ save `H', replace
 */
 build_network
 keep if year == 2023
-drop if iso2 == "USA"
+replace a_plus = 0 if iso2 == "USA"
+replace a_plus = 0 if iso == "USA"
+*replace a_minus = 0 if iso == "USA"
+*replace a_minus = 0 if iso2 == "USA"
 collapse (sum) d_plus=a_plus d_minus=a_minus, by(iso year)
 
 merge n:1 iso using "${DIR_DATA_TMP}/scratch_coeffs.dta", nogen keep(matched)
-gen H_prime = 1 / (1 - alpha_A * d_plus - alpha_R * d_minus)
+gen H_prime = 1 / (1 - alpha_A * d_plus - alpha_R * d_minus) 
 keep iso H_prime
 tempfile H_prime
 save `H_prime', replace
+
+
+/*
+* Compute TMA / TMR in 2023
+*/
+build_network
+keep if year == 2023
+merge m:1 iso year using "${DIR_DATA_PROCESSED}/longrun/macro.dta", nogen keep(matched)
+drop iso
+rename iso2 iso
+
+
+gen TMA = F_ally * milex
+gen TMR = F_rival * milex
+collapse (sum) TMA TMR, by(iso)
+
+tempfile milex
+save `milex'
 
 
 /*
@@ -151,23 +171,27 @@ save `H_prime', replace
 build_network
 keep if year == 2023
 merge m:1 iso year using "${DIR_DATA_PROCESSED}/longrun/macro.dta", nogen keep(matched)
-drop if iso == "USA"
+replace F_ally = 0 if iso == "USA"
+replace F_ally = 0 if iso2 == "USA"
+*replace F_rival = 0 if iso == "USA"
+*replace F_rival = 0 if iso2 == "USA"
 drop iso
 rename iso2 iso
 
 
-gen TMA_exus = F_ally * milex
-gen TMR_exus = F_rival * milex
+gen TMA_prime = F_ally * milex
+gen TMR_prime = F_rival * milex
 
-collapse (sum) TMA_exus TMR_exus, by(iso)
+collapse (sum) TMA_prime TMR_prime, by(iso)
 tempfile milex_exus
 save `milex_exus', replace
 
 
+/*
+* Merge everything, compute coefficients and predictions
+*/
 use "${DIR_DATA_PROCESSED}/longrun/macro.dta", clear
 bysort year: egen gdp_avg = mean(gdp)
-rename ALLY_milex TMA
-rename RIVAL_milex TMR
 
 
 keep if year == 2023
@@ -176,6 +200,7 @@ merge 1:1 iso using "${DIR_DATA_TMP}/scratch_coeffs.dta", nogen keep(master matc
 merge 1:1 iso using `H', nogen keep(master matched)
 merge 1:1 iso using `H_prime', nogen keep(master matched)
 merge 1:1 iso using `milex_exus', nogen keep(master matched)
+merge 1:1 iso using `milex', nogen keep(master matched)
 
 
 bysort year: egen H_sum = total(H)
@@ -188,7 +213,7 @@ gen lambda_prime = H_prime / H * ((1-1/H_prime_sum) / (1-1/H_sum))^2 * lambda
 
 
 gen milpred_orig = TMA * alpha_A + TMR * alpha_R + theta * gdp_avg + lambda * gdp
-gen milpred_exus = TMA_exus * alpha_A + TMR_exus * alpha_R + theta_prime * gdp_avg + lambda_prime * gdp
+gen milpred_exus = TMA_prime * alpha_A + TMR_prime * alpha_R + theta_prime * gdp_avg + lambda_prime * gdp
 
 gen diff_gdp = (milpred_exus - milpred_orig) / gdp
 
@@ -201,6 +226,11 @@ save "${DIR_DATA_TMP}/scratch_predictions.dta", replace
 
 
 
+
+
+/*
+* Compute TMA / TMR absent USA (h_prime) in 2023
+*/
 use "${DIR_DATA_TMP}/scratch_predictions.dta", clear
 gen diff_pct = diff_gdp * 100
 
@@ -213,4 +243,70 @@ graph bar diff_pct, ///
     legend(off) ///
     graphregion(color(white)) plotregion(color(white)) xsize(20) ysize(9)
 
-twoway 
+graph export "${DIR_DATA_EXPORTS}/counterfactual.pdf", as(pdf) replace
+graph close	
+
+
+use "${DIR_DATA_TMP}/scratch_predictions.dta", clear
+
+gen H_relative = H_prime / H
+gen mil_relative = milpred_exus / milpred_orig
+
+twoway (scatter H_relative mil_relative)
+
+
+
+
+use "${DIR_DATA_TMP}/scratch_predictions.dta", clear
+gen milratio = milpred_exus / milpred_orig
+
+gen H_relative = H_prime / H
+drop if H < 0 | H_prime < 0
+
+twoway (scatter milratio H_relative, mlabel(iso))
+
+graph export "${DIR_DATA_EXPORTS}/counterfactual_rel.pdf", as(pdf) replace
+graph close	
+
+
+
+/*
+* Compute TMA / TMR absent USA (h_prime) in 2023
+*/
+use "${DIR_DATA_TMP}/scratch_predictions.dta", clear
+
+gen diff_TMA = ((TMA_prime - TMA) * alpha_A) / gdp * 100
+gen diff_TMR = ((TMR_prime - TMR) * alpha_R) / gdp * 100
+
+gen diff_theta = ((theta_prime - theta) * gdp_avg) / gdp * 100
+gen diff_lambda = ((lambda_prime - lambda) * gdp) / gdp * 100
+
+gen diff_gdp_ppt = diff_gdp * 100
+
+
+
+graph bar diff_TMA if eu27 == 1, ///
+    over(iso, label(labsize(small) angle(45)) sort(1) descending) ///
+    bargap(15) bar(1, color(purple)) ///
+    ytitle("Difference in military spending / GDP %") ///
+    legend(off) ///
+    graphregion(color(white)) plotregion(color(white)) xsize(20) ysize(9) name("TMA", replace)
+
+
+
+graph bar diff_gdp_ppt if eu27 == 1, ///
+    over(iso, label(labsize(small) angle(45)) sort(1) descending) ///
+    bargap(15) bar(1, color(purple)) ///
+    ytitle("Difference in military spending / GDP %") ///
+    legend(off) ///
+    graphregion(color(white)) plotregion(color(white)) xsize(20) ysize(9) name("Total", replace)
+	
+	
+sum TMA
+local TMA_mean = r(mean)
+
+sum TMR
+local TMR_mean = r(mean)
+
+local relation = `TMA_mean' / `TMR_mean'
+disp `relation'

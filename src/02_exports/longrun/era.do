@@ -152,7 +152,7 @@ estadd local yfe "\checkmark"
 estadd local csexposure "\checkmark"
 
 esttab using "${DIR_DATA_EXPORTS}/longrun/reg_decade.tex",  star(* 0.1 ** 0.05 *** 0.01) tex fragment nonumbers nomtitle posthead("") keep(ALLY_* RIVAL_* gdp gdp_avg war_bn war_x_gdp) label ///
-	stats(yfe csexposure r2 N, fmt(1 1 2 "%9.0fc") label("Decade FE" "Country-specific loading" "\(R^2\)"  "\$N\$")) replace se
+	stats(yfe csexposure csexposure r2 N, fmt(1 1 1 2 "%9.0fc") label("Decade FE" "Country-specific \(\lambda\)" "Country-specific \(\theta\)" "\(R^2\)"  "\$N\$")) replace se
 	
 	
 // Yearly, decade network	
@@ -227,12 +227,8 @@ estadd local yfe "\checkmark"
 estadd local csexposure "\checkmark"
 
 esttab using "${DIR_DATA_EXPORTS}/longrun/reg_yearly_decadenetwork.tex",  star(* 0.1 ** 0.05 *** 0.01) tex fragment nonumbers nomtitle posthead("") keep(ALLY_* RIVAL_* gdp gdp_avg war_bn war_x_gdp ww*) label ///
-	stats(yfe csexposure r2 N, fmt(1 1 2 "%9.0fc") label("Year FE" "Country-specific loading" "\(R^2\)"  "\$N\$")) replace se
+	stats(yfe csexposure csexposure r2 N, fmt(1 1 1 2 "%9.0fc") label("Year FE" "Country-specific \(\lambda\)" "Country-specific \(\theta\)" "\(R^2\)"  "\$N\$")) replace se
 
-	
-	
-	
-	
 	
 	
 // Yearly panel, back out country

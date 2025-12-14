@@ -1,15 +1,23 @@
 *** First stage
 cap program drop run_firststage 
 program define run_firststage, rclass
+	syntax, ///
+		[pricetaker(real 0)]
 
 	* milex_{it}/gdp_{it-1} = windfall_{it}/gdp_{it-1}
 	*reghdfe milex1_gdp windfall_gdp_w, absorb(iso year)
 	*gen dmilex_exog = windfall_gdp_w * _b[windfall_gdp_w] * l1gdp
 	
-	reghdfe milex1 windfall l1dmilex l2dmilex, noabsorb cluster(iso year)
+	if `pricetaker' == 1 {
+		replace windfall = windfall_05
+	}
+	
+	reghdfe milex1 windfall l1dmilex l2dmilex, noabsorb cluster(iso)
 	gen dmilex_exog = _b[windfall] * windfall
 	
-	keep iso year dmilex_exog
+	
+	rename milex1 dmilex_raw
+	keep iso year dmilex_exog dmilex_raw
 end
 
 *** Second stage
@@ -38,7 +46,10 @@ program define run_secondstage, rclass
 	joinby iso year using `windfalls'
 	gen ALLY_dmilex_exog = dmilex_exog * lF_ally
 	gen RIVAL_dmilex_exog = dmilex_exog * lF_rival
-	collapse (sum) ALLY_dmilex_exog RIVAL_dmilex_exog, by(iso1 year)
+	
+	gen ALLY_dmilex_raw = dmilex_raw * lF_ally
+	gen RIVAL_dmilex_raw = dmilex_raw * lF_rival
+	collapse (sum) ALLY_dmilex_exog RIVAL_dmilex_exog ALLY_dmilex_raw RIVAL_dmilex_raw, by(iso1 year)
 	rename iso1 iso
 	
 	* Tempoerarily save windfalls of allies/rivals
@@ -76,10 +87,11 @@ cap program drop bootstrap_wrapper
 program define bootstrap_wrapper, rclass
 	syntax, ///
 		[secondstage(string)] ///
-		[eststo(string)]
+		[eststo(string)] ///
+		[pricetaker(real 0)]
 		
 	preserve
-	run_firststage
+	run_firststage, pricetaker(`pricetaker')
 	run_secondstage, secondstage(`secondstage') eststo(`eststo')
 	return add
 	restore
@@ -106,6 +118,11 @@ esttab using "${DIR_DATA_EXPORTS}/shortrun/iv/firststage.tex", ///
 xtset, clear
 
 eststo clear
+
+// Col 0: uninstrumented
+bootstrap_wrapper, ///
+	secondstage(milex1 ALLY_dmilex_raw RIVAL_dmilex_raw ldgdp windfall, noabsorb cluster(iso)) ///
+	eststo(1)
 
 // Col 1
 bootstrap_wrapper, ///
@@ -151,7 +168,11 @@ estadd local csslopes "\checkmark"
 	
 gen ALLY_dmilex_exog = .
 gen RIVAL_dmilex_exog = .
-	
+gen ALLY_dmilex_raw = .
+gen RIVAL_dmilex_raw = .
+
+label var ALLY_dmilex_raw "\(\Delta TMA\)"
+label var RIVAL_dmilex_raw "\(\Delta TMR\)"
 label var ALLY_dmilex_exog "\(\Delta \widehat{TMA}\)"
 label var RIVAL_dmilex_exog "\(\Delta \widehat{TMR}\)"
 label var ldgdp "\(\Delta GDP\)"
@@ -161,22 +182,10 @@ label var war_gdp "\(War \times GDP \)"
 	
 	
 esttab using "${DIR_DATA_EXPORTS}/shortrun/iv/secondstage.tex", ///
-	keep(ALLY_dmilex_exog RIVAL_dmilex_exog ldgdp ldgdp_avg war_bn war_gdp) ///
+	keep(ALLY_dmilex_raw RIVAL_dmilex_raw ALLY_dmilex_exog RIVAL_dmilex_exog ldgdp ldgdp_avg war_bn war_gdp) ///
+	order(ALLY_dmilex_raw RIVAL_dmilex_raw ALLY_dmilex_exog RIVAL_dmilex_exog ldgdp ldgdp_avg war_bn war_gdp) ///
 	star(* 0.1 ** 0.05 *** 0.01) ///
 	tex fragment nonumbers nomtitle posthead("")  se label  ///
 	stats(controls yfe csslopes r2 N, fmt(1 1 1 2 "%9.0fc") ///
-	label("Controls" "Year FE" "Country-specific slopes" "\(R^2\)" "\$N\$")) ///
+	label("Controls" "Year FE" "Country-specific \(\lambda\)" "\(R^2\)" "\$N\$")) ///
 	replace
-	
-
-	
-/*
-bootstrap ///
-	b_TMA=r(b_TMA) ///
-	b_TMR=r(b_TMR) ///
-	b_ldGDP=r(b_ldGDP) ///
-	b_ldGDP_avg=r(b_ldGDP_avg) ///
-	b_windfall=r(b_windfall) ///
-	, reps(100) cluster(year) seed(12345) level(90): bootstrap_wrapper, ///
-		secondstage(milex1 ALLY_dmilex_exog RIVAL_dmilex_exog ldgdp ldgdp_avg windfall, noabsorb cluster(year))
-*/

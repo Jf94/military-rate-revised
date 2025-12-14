@@ -32,5 +32,4 @@ replace isob = isoa_old if _n > _N/2
 drop isoa_old
 collapse (sum) rivalry, by(year isoa isob)
 
-
 save "${DIR_DATA_PROCESSED}/common/rivalries.dta", replace

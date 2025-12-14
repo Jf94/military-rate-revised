@@ -22,11 +22,15 @@ encode iso, gen(isoenc)
 merge m:1 year using "${DIR_DATA_PROCESSED}/common/gprc_global.dta", nogen keep(master matched)
 
 gen war_x_gdp = war * gdp
+gen ww1_gdp = ww1 * gdp
+gen ww2_gdp = ww2 * gdp
 gen war_bn = war * 1e9
 label var war_bn "War (USD bn)"
 label var war_x_gdp "War \(\times\) GDP"
 label var ww1_bn "World War I (USD bn)"
 label var ww2_bn "World War II (USD bn)"
+label var ww1_gdp "World War I \(\times\) GDP"
+label var ww2_gdp "World War II \(\times\) GDP"
 
 xtset cid year
 
@@ -52,8 +56,8 @@ estadd local yfe "\checkmark"
 estadd local csexposure "\checkmark"
 // From call: Here also one with regional wars
 
-esttab using "${DIR_DATA_EXPORTS}/longrun/reg.tex",  star(* 0.1 ** 0.05 *** 0.01) tex fragment nonumbers nomtitle posthead("") keep(ALLY_* RIVAL_* gdp gdp_avg war_bn war_x_gdp ww*) label ///
-	stats(yfe csexposure r2 N, fmt(1 1 2 "%9.0fc") label("Year FE" "Country-specific slopes" "\(R^2\)"  "\$N\$")) replace se
+esttab using "${DIR_DATA_EXPORTS}/longrun/reg.tex", star(* 0.1 ** 0.05 *** 0.01) tex fragment nonumbers nomtitle posthead("") keep(ALLY_* RIVAL_* gdp gdp_avg war_bn war_x_gdp ww*) label ///
+	stats(yfe csexposure csexposure r2 N, fmt(1 1 1 2 "%9.0fc") label("Year FE" "Country-specific \(\lambda\)" "Country-specific \(\theta\)" "\(R^2\)"  "\$N\$")) replace se
 eststo clear
 
 
@@ -80,7 +84,7 @@ estadd local csexposure "\checkmark"
 // From call: Here also one with regional wars
 
 esttab using "${DIR_DATA_EXPORTS}/longrun/reg_cfe.tex",  star(* 0.1 ** 0.05 *** 0.01) tex fragment nonumbers nomtitle posthead("") keep(ALLY_* RIVAL_* gdp gdp_avg war_bn war_x_gdp ww*) label ///
-	stats(yfe csexposure r2 N, fmt(1 1 2 "%9.0fc") label("Year FE" "Country-specific slopes" "\(R^2\)"  "\$N\$")) replace se
+	stats(yfe csexposure csexposure r2 N, fmt(1 1 1 2 "%9.0fc") label("Year FE" "Country-specific \(\lambda\)" "Country-specific \(\theta\)" "\(R^2\)"  "\$N\$")) replace se
 eststo clear
 
 
